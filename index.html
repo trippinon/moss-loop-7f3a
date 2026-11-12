@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#416653">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="One more row">
+<title>One more row · Knitting tracker</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f7f3eb; color: #253c31; font-family: system-ui, sans-serif; padding: 28px 18px; }
+  main { max-width: 440px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 26px; }
+  .yarn { font-size: 44px; }
+  h1 { font-family: Georgia, serif; font-weight: normal; font-size: 36px; margin: 8px 0; }
+  p { color: #59675d; line-height: 1.5; }
+  .card { background: #fffdf8; border: 1px solid #deded1; border-radius: 24px; padding: 28px 24px; box-shadow: 0 10px 35px #253c3108; text-align: center; }
+  .label { font-size: 13px; letter-spacing: 2px; text-transform: uppercase; }
+  .row { font-size: 78px; line-height: 1.15; font-weight: 650; font-variant-numeric: tabular-nums; margin: 8px 0 18px; }
+  .stitch { display: block; font-family: Georgia, serif; font-size: 46px; margin: 8px 0; }
+  .instruction { background: #e9efe5; border-radius: 16px; padding: 18px; margin-bottom: 22px; }
+  .instruction.purl { background: #f3e7de; }
+  button, input, select { font: inherit; }
+  button { cursor: pointer; border: 1px solid #b9c4b8; border-radius: 12px; padding: 13px 18px; min-height: 48px; color: #253c31; background: transparent; }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #b16b39; outline-offset: 3px; }
+  .primary { width: 100%; background: #416653; color: white; border-color: #416653; font-weight: 650; font-size: 19px; padding: 18px; }
+  button:disabled { opacity: .45; cursor: default; }
+  .secondary { width: 100%; margin-top: 12px; }
+  details { margin-top: 22px; background: #fffdf8; border: 1px solid #deded1; border-radius: 16px; padding: 18px; }
+  summary { cursor: pointer; font-weight: 600; }
+  label { display: block; margin: 18px 0 7px; font-size: 14px; }
+  input, select { width: 100%; padding: 12px; border: 1px solid #b9c4b8; border-radius: 9px; background: white; color: #253c31; }
+  .note { font-size: 13px; text-align: center; }
+  #message { min-height: 20px; margin: 12px 0 0; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="note" id="startupNote" role="status">Open the website link in Safari to use the tracker. File previews may block the buttons. JavaScript must be enabled.</p>
+  <header><div class="yarn" aria-hidden="true">🧶</div><h1>One more row</h1><p>A little place to keep your place.</p></header>
+  <section class="card" aria-label="Knitting progress">
+    <div aria-live="polite" aria-atomic="true">
+      <div class="label">Current row</div><div class="row" id="row">1</div>
+      <div class="instruction" id="instruction"><div class="label">Work this row in</div><strong class="stitch" id="stitch">Knit</strong><span id="next">Next up: Purl</span></div>
+    </div>
+    <button class="primary" id="complete" type="button">Row complete ✓</button>
+    <button class="secondary" id="undo" type="button">Go back one row</button>
+    <p id="message" role="status"></p>
+  </section>
+  <details>
+    <summary>Adjust your knitting</summary>
+    <p>This tracker alternates knit and purl rows. Choose how row 1 starts, or jump to your current row.</p>
+    <label for="first">Row 1 stitch</label><select id="first"><option value="knit">Knit</option><option value="purl">Purl</option></select>
+    <form id="jump"><label for="rowInput">Jump to row</label><input id="rowInput" type="number" min="1" max="999999" step="1" required inputmode="numeric"><button class="secondary" type="submit">Set current row</button></form>
+    <button class="secondary" id="reset" type="button">Start again at row 1</button>
+  </details>
+  <p class="note" id="saveNote">Progress is saved only in this browser on this device. Keep using the same browser; clearing website data removes saved progress.</p>
+  <p class="note">On iPhone: open in Safari, then tap Share → Add to Home Screen for easy access.</p>
+</main>
+<script>
+(() => {
+  'use strict';
+  const key = 'one-more-row-v1';
+  let state = { row: 1, first: 'knit' };
+  let canSave = true;
+  try {
+    const saved = JSON.parse(localStorage.getItem(key));
+    if (saved && Number.isSafeInteger(saved.row) && saved.row >= 1 && saved.row <= 999999 && ['knit', 'purl'].includes(saved.first)) state = { row: saved.row, first: saved.first };
+  } catch (_) { canSave = false; }
+  const el = id => document.getElementById(id);
+  function render(message = '') {
+    const knit = (state.row % 2 === 1) === (state.first === 'knit');
+    el('row').textContent = state.row;
+    el('stitch').textContent = knit ? 'Knit' : 'Purl';
+    el('next').textContent = 'Next up: ' + (knit ? 'Purl' : 'Knit');
+    el('instruction').classList.toggle('purl', !knit);
+    el('undo').disabled = state.row === 1;
+    el('complete').disabled = state.row === 999999;
+    el('first').value = state.first;
+    el('rowInput').value = state.row;
+    el('message').textContent = message;
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch (_) { canSave = false; }
+    if (!canSave) el('saveNote').textContent = 'Browser storage is unavailable. Keep this page open to retain your progress.';
+  }
+  el('complete').addEventListener('click', () => { if (state.row < 999999) { state.row++; render(); } });
+  el('undo').addEventListener('click', () => { if (state.row > 1) { state.row--; render(); } });
+  el('first').addEventListener('change', event => { state.first = event.target.value; render('Starting stitch updated.'); });
+  el('jump').addEventListener('submit', event => {
+    event.preventDefault();
+    const row = Number(el('rowInput').value);
+    if (Number.isInteger(row) && row >= 1 && row <= 999999) { state.row = row; render('Current row updated.'); }
+  });
+  el('reset').addEventListener('click', () => {
+    if (confirm('Start again at row 1? This will replace your current row.')) { state.row = 1; render('Ready for a fresh start.'); }
+  });
+  render();
+  el('startupNote').hidden = true;
+})();
+</script>
+</body>
+</html>
